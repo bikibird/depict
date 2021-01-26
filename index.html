@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>PICO-8 Image Converter</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+<body>
+	<input type="file" accept="image/*" id="fileinput" />
+	<div>
+		<label for="red">Red</label>
+		<input type="range" min="-255" max="255" value="0" id="red">
+	
+		<label for="green">Green</label>
+		<input type="range" min="-255" max="255" value="0" id="green">
+	
+	
+		<label for="blue">Blue</label>
+		<input type="range" min="-255" max="255" value="0" id="blue">
+	
+		<label for="brightness">Brightness</label>
+		<input type="range" min="-255" max="255" value="0" id="brightness">
+	
+		<label for="contrast">Constrast</label>
+		<input type="range" min="-255" max="255" value="0" id="contrast">
+	
+		<label for="grayscale">Grayscale</label>
+		<input type="checkbox" id="grayscale">
+	
+		<br/>
+		<canvas id="canvas" width="0" height="0"></canvas>
+	</div>
+</body>
+</html>	
+<script>
+	
+	var fileinput = document.getElementById('fileinput')
+	var canvas = document.getElementById('canvas')
+	var context = canvas.getContext('2d')
+	var srcImage = new Image
+	var imgData = null
+	var originalPixels = null
+	var colorDistances
+	for (let i = 0; i < 256; i++) 
+	{
+		for (let j = 0; j < 256; j++) 
+		{
+			colorDistances[i][j] = Math.abs(i * i - j * j)			
+		}	
+	}
+	var filter=[]
+
+
+	fileinput.onchange = function (e)
+	{
+		if (e.target.files && e.target.files.item(0)) 
+		{
+			srcImage.src = URL.createObjectURL(e.target.files[0])
+		}
+	}
+	srcImage.onload = function ()
+	{
+		canvas.width = srcImage.width
+		canvas.height = srcImage.height
+		context.drawImage(srcImage, 0, 0, srcImage.width, srcImage.height)
+		imgData = context.getImageData(0, 0, srcImage.width, srcImage.height)
+		originalPixels = imgData.data.slice()
+	}
+	function getIndex(x, y)
+	{
+  		return (x + y * srcImage.width) * 4
+	}
+</script>	
