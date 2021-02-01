@@ -1,75 +1,134 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>PICO-8 Image Converter</title>
+<title>Depict: Image Demake Tool for PICO-8</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
       integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 </head>
 <body>
-	<input type="file" accept="image/*" id="fileinput" />
-	<div>
-		<label for="red">Red</label>
-		<input type="range" min="-255" max="255" value="0" id="red">
-	
-		<label for="green">Green</label>
-		<input type="range" min="-255" max="255" value="0" id="green">
-	
-	
-		<label for="blue">Blue</label>
-		<input type="range" min="-255" max="255" value="0" id="blue">
-	
-		<label for="brightness">Brightness</label>
-		<input type="range" min="-255" max="255" value="0" id="brightness">
-	
-		<label for="contrast">Constrast</label>
-		<input type="range" min="-255" max="255" value="0" id="contrast">
-	
-		<label for="grayscale">Grayscale</label>
-		<input type="checkbox" id="grayscale">
-	
-		<br/>
-		<canvas id="canvas" width="0" height="0"></canvas>
+	<input type="file" class="d-none" accept="image/*" id="fileInput"/>
+	<div class="container">
+	<div class="row"><h1 class="text-center display-4">Depict: Image Demake Tool for PICO-8</h1></div>	
+	<div class="row">
+		<div class="col"><canvas id="original"></canvas></div>
+		<div class="col">
+			<p><input class="btn btn-info" type="button" value="Load Image File" id="loadButton"></p>
+			<p><select class="form-select" aria-label="Shading" id="filterSelection" ></select></p>
+			<p><input class="btn btn-info" type="button" value="Depict" id="depictButton"></p>
+		</div>	
 	</div>
+	<div class="row">
+		<div class="col">
+			<canvas id="preview"></canvas>
+		</div>
+		<div class="col">
+			<input class="btn btn-info" type="button" value="Download" id="downloadButton">
+			<p class="d-none" id="picoHint">PICO-8 supports dragging and dropping image files from the operating system directly into the sprite sheet.</p>
+		</div>
+	</div>	
+	
+</div>	
+	<!--a>https://www.pexels.com/photo/pink-rose-109813/</a-->
 </body>
 </html>	
+<script src="depict.js"></script>
 <script>
-	
-	var fileinput = document.getElementById('fileinput')
-	var canvas = document.getElementById('canvas')
-	var context = canvas.getContext('2d')
-	var srcImage = new Image
-	var imgData = null
-	var originalPixels = null
-	var colorDistances
-	for (let i = 0; i < 256; i++) 
+	var originalCanvas=document.getElementById("original")
+	var depictionCanvas=document.createElement("canvas")
+	var previewCanvas=document.getElementById("preview")
+	var fileInput = document.getElementById("fileInput")
+	var loadButton=document.getElementById("loadButton")
+	var depictButton=document.getElementById("depictButton")
+	depictButton.classList.add("d-none")
+	var downloadButton=document.getElementById("downloadButton")
+	downloadButton.classList.add("d-none")
+	var picoHint=document.getElementById("picoHint")
+	var filterSelection=document.getElementById("filterSelection")
+	var innerHTML=""
+	Object.keys(filters).forEach(key=>
 	{
-		for (let j = 0; j < 256; j++) 
-		{
-			colorDistances[i][j] = Math.abs(i * i - j * j)			
-		}	
-	}
-	var filter=[]
+		innerHTML=innerHTML+`<option value="${key}" ${filters[key].default?"selected":""}>${key}</option>`
+	})
+	filterSelection.innerHTML=innerHTML
 
-
-	fileinput.onchange = function (e)
+	var srcImage = new Image
+	var imageReady=false
+	var depicted=false
+	var pico1=[0x000000,0x103052,0x852e52,0x008557,0xe4523c,0x615751, 0xc0c2c5, 0xfffde8, 0xff00fd,0xff9f33, 0xffe951, 0x00e155, 0x00aefa, 0x837698, 0xff77af, 0xffcaac]
+	fileInput.onchange = function (e)
 	{
 		if (e.target.files && e.target.files.item(0)) 
 		{
 			srcImage.src = URL.createObjectURL(e.target.files[0])
+			imageReady=false
 		}
+
 	}
 	srcImage.onload = function ()
 	{
-		canvas.width = srcImage.width
-		canvas.height = srcImage.height
-		context.drawImage(srcImage, 0, 0, srcImage.width, srcImage.height)
-		imgData = context.getImageData(0, 0, srcImage.width, srcImage.height)
-		originalPixels = imgData.data.slice()
+		var aspect=srcImage.width/srcImage.height
+		if (srcImage.width>srcImage.height)
+		{
+			if(srcImage.width>512)
+			{
+				var width=512
+				var height=Math.floor(512/aspect)	
+			}
+			else 
+			{
+				var width=srcImage.width
+				var height=srcImage.height		
+			}
+		}
+		else
+		{
+			if(srcImage.height>512)
+			{
+				var height=512
+				var width=Math.floor(512*aspect)
+			}
+			else 
+			{
+				var width=srcImage.width
+				var height=srcImage.height		
+			}
+		}
+		originalCanvas.width=width
+		originalCanvas.height=height
+		var context =originalCanvas.getContext("2d")
+		context.drawImage(srcImage, 0, 0, width, height)
+		imageReady=true
+		depictButton.classList.remove("d-none")
 	}
-	function getIndex(x, y)
+	loadButton.onclick=function()
 	{
-  		return (x + y * srcImage.width) * 4
+		fileInput.click()
 	}
+	depictButton.onclick=function()
+	{
+		if (imageReady)
+		{
+			var {depiction,preview}=depict({original:srcImage,palette:pico1,filter:filters[filterSelection.value]})
+			depictionCanvas.replaceWith(depiction)
+			depictionCanvas=depiction
+			previewCanvas.replaceWith(preview)
+			previewCanvas=preview
+			depicted=true
+			downloadButton.classList.remove("d-none")
+			picoHint.classList.remove("d-none")
+		}
+	}
+	downloadButton.onclick=function()
+	{
+		if (depicted)
+		{
+			var link = document.createElement('a')
+  			link.download = `depiction_${fileInput.files[0].name.split(".")[0]}.png`
+  			link.href = depictionCanvas.toDataURL()
+			link.click()
+		}
+	}
+
 </script>	
