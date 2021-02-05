@@ -4,33 +4,62 @@
 <title>Depict: Image Demake Tool for PICO-8</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+<link rel="stylesheet" href="depict.css">
 </head>
 <body>
 	<input type="file" class="d-none" accept="image/*" id="fileInput"/>
-	<div class="container">
-	<div class="row"><h1 class="text-center display-4">Depict: Image Demake Tool for PICO-8</h1></div>	
-	<div class="row">
-		<div class="col"><canvas id="original"></canvas></div>
-		<div class="col">
-			<p><input class="btn btn-info" type="button" value="Load Image File" id="loadButton"></p>
-			<p><select class="form-select" aria-label="Shading" id="filterSelection" ></select></p>
-			<p><input class="btn btn-info" type="button" value="Depict" id="depictButton"></p>
-		</div>	
+	<h1 class="text-center display-4">Depict: Image Demake Tool for PICO-8</h1>
+	<div class="table mx-auto">
+		<div class="table-row">
+			<div class="table-cell">
+				<div class="table-row"><div class="table-cell">
+					<input class="btn btn-info" type="button" value="Load Image File" id="loadButton">
+				</div></div>
+				<div class="table-row"><div class="table-cell">
+					<canvas id="original"></canvas>
+				</div></div>	
+			</div>
+			<div class="table-cell">
+				<div class="table-row"><div class="table-cell">
+					<select class="form-select custom-select" aria-label="Shading" id="filterSelection" ></select>
+				</div></div>
+				<div class="table-row">
+					<div class="table-cell">
+						<div class="d-flex">
+							<div class="palette d-inline-block text-info" id="palette1"></div>
+							<div class="palette d-inline-block text-info" id="palette2"></div>
+						</div>
+					</div>
+				</div>
+				<div class="table-row">
+					<div class="table-cell">
+						<div class="color-range">
+							<div><span id="colorRangeText">16</span>-Color Cap</div>
+							<input type="range" class="custom-range" min="2" max="16" step="1" value="16" id="colorRange">	
+						</div>
+					</div>
+				</div>
+				<div class="table-row">	
+					<div class="table-cell">
+						<input class="btn btn-info" type="button" value="Depict" id="depictButton">
+					</div>
+				</div>
+			</div>
+		</div>				
+		<div class="table-row">
+			<div class="table-cell">
+				<div class="table-row"><div class="table-cell">
+					<canvas id="preview"></canvas>
+				</div></div>
+			</div>
+			<div class="table-cell">
+				<div class="table-row"><div class="table-cell">
+					<input class="btn btn-info" type="button" value="Download" id="downloadButton">
+				</div></div>
+			</div>	
+		</div>
 	</div>
-	<div class="row">
-		<div class="col">
-			<canvas id="preview"></canvas>
-		</div>
-		<div class="col">
-			<input class="btn btn-info" type="button" value="Download" id="downloadButton">
-			<p class="d-none" id="picoHint">PICO-8 supports dragging and dropping image files from the operating system directly into the sprite sheet.</p>
-		</div>
-	</div>	
-	
-</div>	
-	<!--a>https://www.pexels.com/photo/pink-rose-109813/</a-->
 </body>
 </html>	
 <script src="depict.js"></script>
@@ -44,7 +73,11 @@
 	depictButton.classList.add("d-none")
 	var downloadButton=document.getElementById("downloadButton")
 	downloadButton.classList.add("d-none")
-	var picoHint=document.getElementById("picoHint")
+	var palettes=document.getElementById("palettes")
+	var palette1=document.getElementById("palette1")
+	var palette2=document.getElementById("palette2")
+	var colorRangeText=document.getElementById("colorRangeText")
+	var colorRange=document.getElementById("colorRange")
 	var filterSelection=document.getElementById("filterSelection")
 	var innerHTML=""
 	Object.keys(filters).forEach(key=>
@@ -52,16 +85,42 @@
 		innerHTML=innerHTML+`<option value="${key}" ${filters[key].default?"selected":""}>${key}</option>`
 	})
 	filterSelection.innerHTML=innerHTML
-
 	var srcImage = new Image
 	var imageReady=false
 	var depicted=false
-	var pico1=[
+	var pico=[
 	0x000000, 0x1d2b53, 0x7e2553, 0x008751,
 	0xab5236, 0x5f574f, 0xc2c3c7, 0xfff1e8,
 	0xff004d, 0xffa300, 0xffec27, 0x00e436, 
-	0x29adff, 0x83769c, 0xff77a8, 0xffccaa]
+	0x29adff, 0x83769c, 0xff77a8, 0xffccaa,
+	0x291814,0x111d35,0x422136,0x125359,
+	0x742f29,0x49333b,0xa28879,0xF3ef7d,
+	0xbe1250,0xff6c24,0xa8e72e,0x00b543,
+	0x065ab5,0x754665,0xff6e59,0xff9d81]
 
+	innerHTML=""
+	for (let i=0;i<4;i++)
+	{
+		innerHTML+=`<div class="d-flex">`
+		for (let j=0;j<4;j++)
+		{
+			innerHTML+=`<div class="color color-${i*4+j}" data-index="${i*4+j}"></div>`
+		}
+		innerHTML+=`</div>`
+	}
+	palette1.innerHTML=innerHTML
+	innerHTML=""
+	for (let i=0;i<4;i++)
+	{
+		innerHTML+=`<div class="d-flex">`
+		for (let j=0;j<4;j++)
+		{
+			innerHTML+=`<div class="color color-${i*4+j+16} color-deselected" data-index="${i*4+j+16}"></div>`
+		}
+		innerHTML+=`</div>`
+	}
+	palette2.innerHTML=innerHTML
+	document.addEventListener('click', (e)=>onclick(e))
 	fileInput.onchange = function (e)
 	{
 		if (e.target.files && e.target.files.item(0)) 
@@ -69,7 +128,6 @@
 			srcImage.src = URL.createObjectURL(e.target.files[0])
 			imageReady=false
 		}
-
 	}
 	srcImage.onload = function ()
 	{
@@ -106,6 +164,8 @@
 		context.drawImage(srcImage, 0, 0, width, height)
 		imageReady=true
 		depictButton.classList.remove("d-none")
+		//filterSelection.classList.remove("d-none")
+		//palettes.classList.remove("d-none")
 	}
 	loadButton.onclick=function()
 	{
@@ -115,14 +175,23 @@
 	{
 		if (imageReady)
 		{
-			var {depiction,preview}=depict({original:srcImage,palette:pico1,filter:filters[filterSelection.value]})
+			var elements=document.querySelectorAll(".color")
+			var colors=[]
+			elements.forEach(color=>
+			{
+				if(!color.classList.contains("color-deselected"))
+				{
+					colors.push(pico[parseInt(color.dataset.index)])
+				}
+			})
+			var {depiction,preview}=depict({original:srcImage,palette:colors,filter:filters[filterSelection.value],cap:colorRange.value})
 			depictionCanvas.replaceWith(depiction)
 			depictionCanvas=depiction
 			previewCanvas.replaceWith(preview)
 			previewCanvas=preview
 			depicted=true
 			downloadButton.classList.remove("d-none")
-			picoHint.classList.remove("d-none")
+			previewCanvas.scrollIntoView()
 		}
 	}
 	downloadButton.onclick=function()
@@ -135,5 +204,16 @@
 			link.click()
 		}
 	}
-
+	colorRange.oninput=function(e)
+	{
+		colorRangeText.innerText=e.target.value
+	}
+	onclick=function(e)
+	{
+		if (e.target.matches('.color'))
+		{
+			e.target.classList.toggle("color-deselected")
+			event.stopPropagation()
+		}
+	}
 </script>	

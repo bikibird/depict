@@ -28,19 +28,29 @@ var RGB=class RGB
 		Object.defineProperty(this,"r",{writable: true})
 		Object.defineProperty(this,"g",{writable: true})
 		Object.defineProperty(this,"b",{writable: true})
-		if (green==undefined)
-		{
-			this.r= Math.floor(red/65536)
-			var green = (red % 65536)
-			this.g= Math.floor(green/256)
-			this.b=green % 256 
+		if (red instanceof RGB)
+		{	
+			this.r=red.r
+			this.g=red.g
+			this.b=red.b
 		}
 		else
 		{
-			this.r=red
-			this.g=green
-			this.b=blue
+			if (green==undefined)
+			{
+				this.r= Math.floor(red/65536)
+				var green = (red % 65536)
+				this.g= Math.floor(green/256)
+				this.b=green % 256 
+			}
+			else
+			{
+				this.r=red
+				this.g=green
+				this.b=blue
+			}
 		}
+		return this
 	}
 	distance (rgb)
 	{
@@ -59,9 +69,18 @@ for (let i=0;i<256;i++)
 }
 var Colorspace=class Colorspace
 {
-	constructor()
+	constructor(palette=[],shades=17)
 	{
 		Object.defineProperty(this,"colors",{value:[],writable: true})
+		Object.defineProperty(this,"shades",{value:shades,writable: true})
+		Object.defineProperty(this,"palette",{value:palette.map(entry=>new RGB(entry)),writable: true})
+		for (let i = 0; i < palette.length-1; i++)
+		{
+			for (let j = i+1; j < palette.length; j++)
+			{
+				this.add(palette[i],palette[j],shades)
+			}
+		}
 	}
 	add(rgb1, rgb2, shades)
 	{
@@ -73,12 +92,12 @@ var Colorspace=class Colorspace
 		{
 			rgb2=new RGB(rgb2)
 		}
-		
-		for (let i= 0; i < shades; i++)
+		var divisor=shades-1
+		for (let i= 0; i < divisor; i++)
 		{
-
-			this.colors.push(new Color(rgb1,rgb2,i/shades))
+			this.colors.push(new Color(rgb1,rgb2,i/divisor))
 		}
+		this.colors.push(new Color(rgb1,rgb2,1))
 	}
 	nearest(rgb)
 	{
@@ -94,6 +113,107 @@ var Colorspace=class Colorspace
 			}
 		}
 		return this.colors[nearestIndex]
+	}
+	nearestPaletteEntry(rgb)
+	{
+		var nearestIndex=0
+		var nearestDistance=rgb.distance(this.palette[nearestIndex])
+		for (let i=1; i<this.palette.length; i++)
+		{
+			var distance=rgb.distance(this.palette[i])
+			if (distance<nearestDistance)
+			{
+				nearestIndex=i
+				nearestDistance=distance
+			}
+		}
+		return this.palette[nearestIndex]
+	}
+	quantize(...args)
+	{
+		var {context,cap}=args[0]
+		var {data:pixels,width, height}=context.getImageData(0, 0, context.canvas.width, context.canvas.height)
+		var paintPots=[]
+		for(let j=0;j<cap;j++)
+		{
+			var i=Math.floor(Math.random()*width*4*height+Math.random()*width*4)
+			paintPots[j]={rgb:new RGB(pixels[i],pixels[i+1],pixels[i+2]),drops:1}
+		}
+		function mix(paintPots)
+		{
+			var paints=[]
+			for (let j=0;j<paintPots.length;j++)
+			{
+				paints[j]={rgb:new RGB(paintPots[j].rgb),drops:1}
+			}
+			for(let y=0;y<height;y++)
+			{
+				for(let x=0;x<width;x++)
+				{
+					var i=width*4*y+x*4
+					var nearestDistance=Infinity
+					var nearestIndex=0
+					var distance
+					var pixel=new RGB(pixels[i],pixels[i+1],pixels[i+2])
+					for (let j=0;j<paints.length;j++)
+					{
+						distance=paints[j].rgb.distance(pixel)
+						if (distance<nearestDistance)
+						{
+							nearestIndex=j
+							nearestDistance=distance
+						}
+					}
+					var drops=paints[nearestIndex].drops
+					var divisor=drops+1
+					var paint=paints[nearestIndex].rgb
+					paint.r=Math.floor(((paint.r*drops+pixel.r)/divisor)+.5)
+					paint.g=Math.floor(((paint.g*drops+pixel.g)/divisor)+.5)
+					paint.b=Math.floor(((paint.b*drops+pixel.b)/divisor)+.5)
+					paints[nearestIndex].drops++
+				}	
+			}
+			return paints
+		}
+		var done=false
+		var tempPaintPots
+		while(!done)
+		{
+			tempPaintPots=mix(paintPots)
+			done=true
+			for (let j=0;j<paintPots.length;j++)
+			{
+				if(paintPots[j].rgb.r!=tempPaintPots[j].rgb.r || paintPots[j].rgb.g!=tempPaintPots[j].rgb.g || paintPots[j].rgb.b!=tempPaintPots[j].rgb.b)
+				{
+					done=false
+					paintPots=tempPaintPots
+				}
+			}
+		}
+		//match paintpots to nearests colors in colorspace
+		var colors=[]
+		for (let j=0;j<paintPots.length;j++)
+		{
+			var color=this.nearestPaletteEntry(paintPots[j].rgb)
+			colors.push(color)
+			/*if (color.blend===0)
+			{
+				colors.push(color.rgb1)
+			}
+			else
+			{
+				if (color.blend===1)
+				{
+					colors.push(color.rgb2)
+				}
+				else
+				{
+					colors.push(color.rgb1)
+					colors.push(color.rgb2)
+				}
+			} */
+		}
+		return new Colorspace(colors,this.shades)
 	}
 }
 var Color=class Color
@@ -156,18 +276,11 @@ var Picture =  class Picture
 
 	}
 }
-var depict =function depict({original,palette,filter}={})
+var depict =function depict({original,palette,filter,cap}={})
 {
 	var depiction=document.createElement("canvas")
 	var preview=document.createElement("canvas")
-	var colorspace=new Colorspace()
-	for (let i = 0; i < palette.length-1; i++)
-	{
-		for (let j = i+1; j < palette.length; j++)
-		{
-			colorspace.add(palette[i],palette[j],filter.shades)
-		}
-	}
+	
 	var aspect=original.width/original.height
 	if (original.width>original.height)
 	{
@@ -199,6 +312,18 @@ var depict =function depict({original,palette,filter}={})
 	depiction.height = height
 	depictionContext = depiction.getContext("2d")
 	depictionContext.drawImage(original, 0, 0, width, height)
+
+	var colorspace=new Colorspace(palette,filter.shades)
+/*	for (let i = 0; i < palette.length-1; i++)
+	{
+		for (let j = i+1; j < palette.length; j++)
+		{
+			colorspace.add(palette[i],palette[j],filter.shades)
+		}
+	}
+*/	
+	if (palette.length>cap){colorspace=colorspace.quantize({context:depictionContext,cap:cap})}
+
 	var ditherRGB
 	var picture = new Picture(depictionContext, width, height)
 
