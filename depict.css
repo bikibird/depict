@@ -175,24 +175,3 @@ canvas{
 	box-shadow:  2px 3px 3px  lightgray;
 	
 }
-input[type="range"]{
-	width:257px;
-
-}
-input[type="range"]::-webkit-slider-thumb {
-	background: #17a3b8;
-}
-input[type=range]:focus::-webkit-slider-thumb {
-	background: #17a3b8;
-}
-.color-range{
-	padding:.5em;
-	border-style:solid;
-	border-radius: 3%;
-	border-color:#17a3b840;
-}
-.custom-select{
-	border-width:1px;
-	border-color:#17a3b840;
-}
-

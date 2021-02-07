@@ -32,14 +32,6 @@
 						</div>
 					</div>
 				</div>
-				<div class="table-row">
-					<div class="table-cell">
-						<div class="color-range">
-							<div><span id="colorRangeText">16</span>-Color Cap</div>
-							<input type="range" class="custom-range" min="2" max="16" step="1" value="16" id="colorRange">	
-						</div>
-					</div>
-				</div>
 				<div class="table-row">	
 					<div class="table-cell">
 						<input class="btn btn-info" type="button" value="Depict" id="depictButton">
@@ -57,6 +49,12 @@
 				<div class="table-row"><div class="table-cell">
 					<input class="btn btn-info" type="button" value="Download" id="downloadButton">
 				</div></div>
+				<div class="table-row">	
+					<div class="table-cell">
+						<div id="depictionInfo">
+						</div>
+					</div>
+				</div>
 			</div>	
 		</div>
 	</div>
@@ -71,13 +69,12 @@
 	var loadButton=document.getElementById("loadButton")
 	var depictButton=document.getElementById("depictButton")
 	depictButton.classList.add("d-none")
+	var depictionInfo=document.getElementById("depictionInfo")
+	depictionInfo.classList.add("d-none")
 	var downloadButton=document.getElementById("downloadButton")
 	downloadButton.classList.add("d-none")
-	var palettes=document.getElementById("palettes")
 	var palette1=document.getElementById("palette1")
 	var palette2=document.getElementById("palette2")
-	var colorRangeText=document.getElementById("colorRangeText")
-	var colorRange=document.getElementById("colorRange")
 	var filterSelection=document.getElementById("filterSelection")
 	var innerHTML=""
 	Object.keys(filters).forEach(key=>
@@ -97,7 +94,8 @@
 	0x742f29,0x49333b,0xa28879,0xF3ef7d,
 	0xbe1250,0xff6c24,0xa8e72e,0x00b543,
 	0x065ab5,0x754665,0xff6e59,0xff9d81]
-
+	pico=pico.map(entry=>new RGB(entry))
+	pico.forEach((color,index)=>color.picoIndex=index)
 	innerHTML=""
 	for (let i=0;i<4;i++)
 	{
@@ -164,8 +162,6 @@
 		context.drawImage(srcImage, 0, 0, width, height)
 		imageReady=true
 		depictButton.classList.remove("d-none")
-		//filterSelection.classList.remove("d-none")
-		//palettes.classList.remove("d-none")
 	}
 	loadButton.onclick=function()
 	{
@@ -184,13 +180,34 @@
 					colors.push(pico[parseInt(color.dataset.index)])
 				}
 			})
-			var {depiction,preview}=depict({original:srcImage,palette:colors,filter:filters[filterSelection.value],cap:colorRange.value})
-			depictionCanvas.replaceWith(depiction)
-			depictionCanvas=depiction
+			colors=colors.slice(0,16)
+			var {depiction,preview,colorsUsed}=depict({original:srcImage,palette:colors,filter:filters[filterSelection.value]})
 			previewCanvas.replaceWith(preview)
 			previewCanvas=preview
+			depictionCanvas.replaceWith(depiction)
+			depictionCanvas=depiction
 			depicted=true
+			innerHTML=""
+			var hiddenPalette=false
+			colorsUsed.forEach(color=>
+			{
+				if (color<16)
+				{
+					innerHTML=innerHTML+color.toString()+", "
+				}
+				else
+				{
+					hiddenPalette=true
+					innerHTML=innerHTML+(color+112).toString()+", "
+				}
+			})
+			if (hiddenPalette)
+			{
+				depictionInfo.innerHTML=`pal({[0]=${innerHTML.slice(0,-2)}}, 1)`
+			}
+			else{depictionInfo.innerHTML=`<b>Colors Used: </b>${innerHTML.slice(0,-2)}`}
 			downloadButton.classList.remove("d-none")
+			depictionInfo.classList.remove("d-none")
 			previewCanvas.scrollIntoView()
 		}
 	}
@@ -198,15 +215,11 @@
 	{
 		if (depicted)
 		{
-			var link = document.createElement('a')
+		var link = document.createElement('a')
   			link.download = `depiction_${fileInput.files[0].name.split(".")[0]}.png`
   			link.href = depictionCanvas.toDataURL()
 			link.click()
 		}
-	}
-	colorRange.oninput=function(e)
-	{
-		colorRangeText.innerText=e.target.value
 	}
 	onclick=function(e)
 	{
