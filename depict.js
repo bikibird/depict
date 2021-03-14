@@ -147,7 +147,7 @@ var Picture =  class Picture
 		return this
 	}
 }
-var depict =function depict({original,palette,filter}={})
+var depict =function depict({original,palette,filter,size}={})
 {
 	var depiction=document.createElement("canvas")
 	var preview=document.createElement("canvas")
@@ -155,10 +155,10 @@ var depict =function depict({original,palette,filter}={})
 	var aspect=original.width/original.height
 	if (original.width>original.height)
 	{
-		if(original.width>128)
+		if(original.width>size)
 		{
-			var width=128
-			var height=Math.floor(128/aspect)	
+			var width=size
+			var height=Math.floor(size/aspect)	
 		}
 		else 
 		{
@@ -168,10 +168,10 @@ var depict =function depict({original,palette,filter}={})
 	}
 	else
 	{
-		if(original.height>128)
+		if(original.height>size)
 		{
-			var height=128
-			var width=Math.floor(128*aspect)
+			var height=size
+			var width=Math.floor(size*aspect)
 		}
 		else 
 		{

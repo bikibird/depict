@@ -34,6 +34,12 @@
 				</div>
 				<div class="table-row">	
 					<div class="table-cell">
+						<label for="sizeInput" id="sizeLabel">&nbsp;128 x 128</label>
+						<input type="range"  class="form-control-range" id="sizeInput" min="1" max="128" value=128>
+					</div>
+				</div>
+				<div class="table-row">	
+					<div class="table-cell">
 						<input class="btn btn-info" type="button" value="Depict" id="depictButton">
 					</div>
 				</div>
@@ -58,8 +64,7 @@
 			</div>	
 		</div>
 	</div>
-</body>
-</html>	
+	
 <script src="depict.js"></script>
 <script>
 	var originalCanvas=document.getElementById("original")
@@ -67,6 +72,11 @@
 	var previewCanvas=document.getElementById("preview")
 	var fileInput = document.getElementById("fileInput")
 	var loadButton=document.getElementById("loadButton")
+	var sizeInput=document.getElementById("sizeInput")
+	sizeInput.classList.add("d-none")
+	var sizeLabel=document.getElementById("sizeLabel")
+	sizeLabel.classList.add("d-none")
+	var aspect=1
 	var depictButton=document.getElementById("depictButton")
 	depictButton.classList.add("d-none")
 	var depictionInfo=document.getElementById("depictionInfo")
@@ -129,31 +139,36 @@
 	}
 	srcImage.onload = function ()
 	{
-		var aspect=srcImage.width/srcImage.height
+		aspect=srcImage.width/srcImage.height
 		if (srcImage.width>srcImage.height)
 		{
 			if(srcImage.width>512)
 			{
 				var width=512
 				var height=Math.floor(512/aspect)	
+				sizeLabel.innerHTML=`&nbsp;${sizeInput.value} x ${Math.floor(sizeInput.value/aspect +.5)}`
 			}
 			else 
 			{
 				var width=srcImage.width
-				var height=srcImage.height		
+				var height=srcImage.height	
+				sizeLabel.innerHTML=`&nbsp;${srcImage.width} x ${srcImage.height}`	
 			}
 		}
 		else
 		{
 			if(srcImage.height>512)
 			{
-				var height=512
+				
 				var width=Math.floor(512*aspect)
+				var height=512
+				sizeLabel.innerHTML=`&nbsp;${Math.floor(sizeInput.value*aspect +.5)} x ${sizeInput.value}`
 			}
 			else 
 			{
 				var width=srcImage.width
-				var height=srcImage.height		
+				var height=srcImage.height	
+				sizeLabel.innerHTML=`&nbsp;${sizeInput.value} x ${sizeInput.value}`	
 			}
 		}
 		originalCanvas.width=width
@@ -162,11 +177,40 @@
 		context.drawImage(srcImage, 0, 0, width, height)
 		imageReady=true
 		depictButton.classList.remove("d-none")
+		sizeInput.classList.remove("d-none")
+		sizeLabel.classList.remove("d-none")
 	}
 	loadButton.onclick=function()
 	{
 		fileInput.click()
 	}
+	sizeInput.oninput = function (e)
+	{
+
+		if (srcImage.width>srcImage.height)
+		{
+			if(srcImage.width>sizeInput.value)
+			{
+				sizeLabel.innerHTML=`&nbsp;${sizeInput.value} x ${Math.floor(sizeInput.value/aspect +.5)}`
+			}
+			else 
+			{
+				sizeLabel.innerHTML=`&nbsp;${srcImage.width} x ${srcImage.height}`
+			}
+		}
+		else
+		{
+			if(srcImage.height>sizeInput.value)
+			{
+				sizeLabel.innerHTML=`&nbsp;${Math.floor(sizeInput.value*aspect+.5)} x ${sizeInput.value}`
+			}
+			else 
+			{
+				sizeLabel.innerHTML=`&nbsp;${sizeInput.value} x ${sizeInput.value}`
+			}
+		}
+	}	
+	
 	depictButton.onclick=function()
 	{
 		if (imageReady)
@@ -181,7 +225,7 @@
 				}
 			})
 			colors=colors.slice(0,16)
-			var {depiction,preview,colorsUsed}=depict({original:srcImage,palette:colors,filter:filters[filterSelection.value]})
+			var {depiction,preview,colorsUsed}=depict({original:srcImage,palette:colors,filter:filters[filterSelection.value],size:sizeInput.value})
 			previewCanvas.replaceWith(preview)
 			previewCanvas=preview
 			depictionCanvas.replaceWith(depiction)
@@ -217,7 +261,7 @@
 		{
 		var link = document.createElement('a')
   			link.download = `depiction_${fileInput.files[0].name.split(".")[0]}.png`
-  			link.href = depictionCanvas.toDataURL()
+  			link.href = depictionCanvas.toDataURL("image/png")
 			link.click()
 		}
 	}
@@ -230,3 +274,5 @@
 		}
 	}
 </script>	
+</body>
+</html>
