@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2021 Jennifer L Schmidt
+Copyright (c) 2021-2023 Jennifer L Schmidt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -147,7 +147,7 @@ var Picture =  class Picture
 		return this
 	}
 }
-var depict =function depict({original,palette,filter,size}={})
+var depict =function depict({original,palette,filter,size,diffusion}={})
 {
 	var depiction=document.createElement("canvas")
 	var preview=document.createElement("canvas")
@@ -221,9 +221,9 @@ var depict =function depict({original,palette,filter,size}={})
 				{
 					eRGB=picture.rgb(ex,ey)
 
-					eRGB.r=Math.min(Math.max(eRGB.r +Math.floor(redError * point.amount+.5), 0), 255)
-					eRGB.g=Math.min(Math.max(eRGB.g + Math.floor(greenError * point.amount+.5), 0), 255)
-					eRGB.b=Math.min(Math.max(eRGB.b + Math.floor(blueError * point.amount+.5), 0), 255)
+					eRGB.r=Math.min(Math.max(eRGB.r +Math.floor(redError*diffusion * point.amount+.5), 0), 255)
+					eRGB.g=Math.min(Math.max(eRGB.g + Math.floor(greenError*diffusion * point.amount+.5), 0), 255)
+					eRGB.b=Math.min(Math.max(eRGB.b + Math.floor(blueError*diffusion * point.amount+.5), 0), 255)
 					picture.set(ex,ey,eRGB)
 				}	
 			})
@@ -362,3 +362,12 @@ filters["Wind"]={
 	],
 	default:false
 }
+
+filters["Lightning"]={  
+	matrix:[[1/2]],
+	corrections:[
+		{x:1,y:1,amount:1},
+	],
+	default:false
+}
+
