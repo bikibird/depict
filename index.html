@@ -46,14 +46,14 @@
 				</div>
 				<div class="table-row">	
 					<div class="table-cell">
-						<div class="form-check form-switch">
+						<div class="form-check form-switch" id="cropControl">
 							<input class="form-check-input" type="checkbox" id="crop">
 							<label class="form-check-label" for="crop">Crop to Square</label>
 						</div>
 					</div>
 				</div>
 				<div class="table-row">	
-					<div class="table-cell">
+					<div class="table-cell" id="sizeControl">
 						<label for="sizeInput" id="sizeLabel">&nbsp;128 x 128&nbsp;</label>
 						<input type="range"  class="form-control-range" id="sizeInput" min="1" max="128" value=128>
 					</div>
@@ -81,6 +81,13 @@
 						</div>
 					</div>
 				</div>
+				<div class="table-row">	
+					<div class="table-cell">
+						<div>
+							<pre id="cartText"></pre>
+						</div>
+					</div>
+				</div>
 			</div>	
 		</div>
 	</div>
@@ -93,9 +100,7 @@
 	var fileInput = document.getElementById("fileInput")
 	var loadButton=document.getElementById("loadButton")
 	var sizeInput=document.getElementById("sizeInput")
-	sizeInput.classList.add("d-none")
 	var sizeLabel=document.getElementById("sizeLabel")
-	sizeLabel.classList.add("d-none")
 	var aspect=1
 	var depictButton=document.getElementById("depictButton")
 	depictButton.classList.add("d-none")
@@ -109,6 +114,9 @@
 	var filterSelection=document.getElementById("filterSelection")
 	var diffusion=document.getElementById("diffusion")
 	var diffusionLabel=document.getElementById("diffusionLabel")
+	var cartText=document.getElementById("cartText")
+	var sizeControl=document.getElementById("sizeControl")
+	var cropControl=document.getElementById("cropControl")
 	var innerHTML=""
 	Object.keys(filters).forEach(key=>
 	{
@@ -164,11 +172,25 @@
 					innerHTML+=`<div class="color color-${i*4+j+16} color-selected" data-index="${i*4+j+16}"></div>`
 				}
 				innerHTML+=`</div>`
-				
 			}
 			palette2.innerHTML=innerHTML
+			sizeInput.value=128
+			crop.checked=true
+			crop.dispatchEvent(new Event("change"))
+			sizeControl.classList.add("d-none")
+			cropControl.classList.add("d-none")
+
+		}	
+		else
+		{
+			sizeControl.classList.remove("d-none")
+			cropControl.classList.remove("d-none")
 		}
 	}	
+	crop.onchange=function(e)
+	{
+		if (imageReady){srcImage.onload()}
+	}
 	filterSelection.onchange=function(e)
 	{
 		if (filters[e.target.value].corrections.length==0)
@@ -193,53 +215,54 @@
 	}
 	srcImage.onload = function ()
 	{
-		var aspect=srcImage.width/srcImage.height
+		var aspect=this.width/this.height
 		var width,height
-		if (srcImage.width>srcImage.height)
+		if (this.width>this.height)
 		{
-			if(srcImage.width>512)
+			if(this.width>512)
 			{
 				width=512
 				height=Math.floor(512/aspect)
-				if (crop.checked){height=width;aspect=1}
-				sizeLabel.innerHTML=`&nbsp;${sizeInput.value} x ${Math.floor(sizeInput.value/aspect +.5)}`
 			}
 			else 
 			{
-				width=srcImage.width
-				height=srcImage.height	
-				if (crop.checked){height=width;aspect=1}
-				sizeLabel.innerHTML=`&nbsp;${srcImage.width} x ${srcImage.height}`	
+				width=this.width
+				height=this.height	
 			}
+			if (crop.checked){width=height;aspect=1}
+			sizeLabel.innerHTML=`&nbsp;${sizeInput.value} x ${Math.floor(sizeInput.value/aspect +.5)}`
 		}
 		else
 		{
-			if(srcImage.height>512)
+			if(this.height>512)
 			{
-				
 				width=Math.floor(512*aspect)
 				height=512
-				if (crop.checked){width=height;aspect=1}
-				sizeLabel.innerHTML=`&nbsp;${Math.floor(sizeInput.value*aspect +.5)} x ${sizeInput.value}`
 			}
 			else 
 			{
-				width=srcImage.width
-				height=srcImage.height	
-				if (crop.checked){width=height;aspect=1}
-				sizeLabel.innerHTML=`&nbsp;${sizeInput.value} x ${sizeInput.value}`	
+				width=this.width
+				height=this.height					
 			}
+			if (crop.checked){height=width;aspect=1}
+			sizeLabel.innerHTML=`&nbsp;${Math.floor(sizeInput.value*aspect +.5)} x ${sizeInput.value}`
 		}
-		
 		originalCanvas.width=width
 		originalCanvas.height=height
 		var context =originalCanvas.getContext("2d")
-		context.drawImage(srcImage, (srcImage.width-width)/2, (srcImage.height-height)/2,width,height,0,0, width, height)
+		if (crop.checked)
+		{
+			context.drawImage(this, (this.width-width)/2, (this.height-height)/2,width,height,0,0, width, height)	
+		}
+		else
+		{
+			context.drawImage(this, 0, 0, width, height)
+		}
 		imageReady=true
 		depictButton.classList.remove("d-none")
-		sizeInput.classList.remove("d-none")
-		sizeLabel.classList.remove("d-none")
+		if (!labelMaker.checked){sizeControl.classList.remove("d-none")}
 	}
+
 	loadButton.onclick=function()
 	{
 		fileInput.click()
@@ -285,12 +308,21 @@
 				}
 			})
 			if (!labelMaker.checked){colors=colors.slice(0,16)}
-			var {depiction,preview,colorsUsed}=depict({original:originalCanvas,palette:colors,filter:filters[filterSelection.value],size:sizeInput.value,diffusion:diffusion.value/100})
+			var {depiction,preview,colorsUsed,colorString}=depict({original:originalCanvas,palette:colors,filter:filters[filterSelection.value],size:sizeInput.value,diffusion:diffusion.value/100})
 			previewCanvas.replaceWith(preview)
 			previewCanvas=preview
 			depictionCanvas.replaceWith(depiction)
 			depictionCanvas=depiction
 			depicted=true
+			if (labelMaker.checked)
+			{
+				cartText.innerHTML="__label__\n"+colorString
+			}
+			else
+			{
+				cartText.innerHTML="__gfx__\n"+colorString
+			}
+
 			innerHTML=""
 			var hiddenPalette=false
 			colorsUsed.forEach(color=>

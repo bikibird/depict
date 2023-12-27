@@ -21,6 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
 var RGB=class RGB
 {
 	constructor(red,green,blue,picoIndex)
@@ -67,7 +68,6 @@ for (let i=0;i<256;i++)
 	{
 		RGB.squareDistances[i][j]=(i-j)**2
 	}
-
 }
 var Colorspace=class Colorspace
 {
@@ -149,6 +149,8 @@ var Picture =  class Picture
 }
 var depict =function depict({original,palette,filter,size,diffusion}={})
 {
+	var colorMap="0123456789abcdefghijklmnopqrstuv"
+	var colorString=""
 	var depiction=document.createElement("canvas")
 	var preview=document.createElement("canvas")
 	var colorsUsed=new Set()
@@ -213,6 +215,7 @@ var depict =function depict({original,palette,filter,size,diffusion}={})
 			greenError=pixel.g-ditherRGB.g
 			blueError=pixel.b-ditherRGB.b
 			colorsUsed.add(ditherRGB.picoIndex)
+			colorString=colorString+colorMap[ditherRGB.picoIndex]
 			filter.corrections.forEach(point=>
 			{
 				ex=x+point.x
@@ -220,14 +223,15 @@ var depict =function depict({original,palette,filter,size,diffusion}={})
 				if (ex>-1)
 				{
 					eRGB=picture.rgb(ex,ey)
-
 					eRGB.r=Math.min(Math.max(eRGB.r +Math.floor(redError*diffusion * point.amount+.5), 0), 255)
 					eRGB.g=Math.min(Math.max(eRGB.g + Math.floor(greenError*diffusion * point.amount+.5), 0), 255)
 					eRGB.b=Math.min(Math.max(eRGB.b + Math.floor(blueError*diffusion * point.amount+.5), 0), 255)
 					picture.set(ex,ey,eRGB)
 				}	
 			})
+			
 		}
+		colorString=colorString+"\n"
 	}
 	depictionContext.putImageData(picture.pixels, 0, 0)
 	var scale=4
@@ -250,7 +254,7 @@ var depict =function depict({original,palette,filter,size,diffusion}={})
 		}
 	}
 	previewContext.putImageData(previewData, 0, 0)
-	return {depiction:depiction,preview:preview, colorsUsed:[...colorsUsed].sort((a,b)=>a-b)}
+	return {depiction:depiction,preview:preview, colorsUsed:[...colorsUsed].sort((a,b)=>a-b), colorString:colorString}
 }
 var filters={}
 filters["Solid"]={
@@ -320,16 +324,7 @@ filters["Sierra2"]={
 	],
 	default:false
 }
-filters["Rivers"]={
-	matrix:[[1/2]],
-	corrections:[
-		{x:-1,y:1,amount:1/3},
-		{x:0,y:1,amount:1/3},
-		{x:1,y:1,amount:1/3}
-	],
-	default:false
-}
-filters["Streets"]={
+filters["City"]={
 	matrix:[[1/2]],
 	corrections:[
 		{x:1,y:0,amount:1/4},
@@ -339,11 +334,20 @@ filters["Streets"]={
 	],
 	default:false
 }
-filters["Rain"]={
+filters["River"]={
 	matrix:[[1/2]],
 	corrections:[
-		{x:1,y:0,amount:1/2},
-		{x:1,y:1,amount:1/2},
+		{x:-1,y:1,amount:1/3},
+		{x:0,y:1,amount:1/3},
+		{x:1,y:1,amount:1/3}
+	],
+	default:false
+}
+filters["Hilldale"]={  
+	matrix:[[1/2]],
+	corrections:[
+		{x:0,y:1,amount:2/3},
+		{x:0,y:2,amount:1/3},
 	],
 	default:false
 }
@@ -362,7 +366,14 @@ filters["Wind"]={
 	],
 	default:false
 }
-
+filters["Rain"]={
+	matrix:[[1/2]],
+	corrections:[
+		{x:1,y:0,amount:1/2},
+		{x:1,y:1,amount:1/2},
+	],
+	default:false
+}
 filters["Lightning"]={  
 	matrix:[[1/2]],
 	corrections:[
@@ -370,4 +381,14 @@ filters["Lightning"]={
 	],
 	default:false
 }
+filters["Smoke"]={  
+	matrix:[[1/2]],
+	corrections:[
+		{x:1,y:0,amount:2/3},
+		{x:2,y:1,amount:1/3},
+	],
+	default:false
+}
+
+
 
